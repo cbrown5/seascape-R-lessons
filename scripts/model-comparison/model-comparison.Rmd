@@ -1,0 +1,163 @@
+
+## Model comparison with GAMs
+
+
+```{r}
+# Load the data from internet
+
+url <- "https://raw.githubusercontent.com/cbrown5/BenthicLatent/refs/heads/master/data-raw/JuvUVCSites_with_ReefTypes_16Jun2016.csv"
+dat <- read.csv(url)
+
+head(dat)
+```
+
+```{r}
+library(mgcv)
+library(ggplot2)
+
+ggplot(dat) + 
+  aes(x = mindist, y = pres.topa) + 
+  geom_point() + 
+  stat_smooth()
+
+dat$log_mindist <- log10(dat$mindist)
+
+ggplot(dat) + 
+  aes(x = log_mindist, y = pres.topa, color = flow) + 
+  geom_point() + 
+  stat_smooth()
+
+ggplot(dat) + 
+  aes(x = mindist, y = pres.topa, color = flow) + 
+  geom_point() + 
+  stat_smooth() +
+  scale_x_log10()
+
+```
+
+### Choosing a good model
+
+Considerations: 
+- Lots of zeros
+- Count data, so can't be less than zero
+- Count data, so likely that variance increases with the mean
+- Potential non-linear effect of distance to logging
+- Potential interaction between distance to logging and flow
+
+Options for count data: 
+negative binomial or poisson
+
+Few checks to make sure GAM works
+
+```{r}
+class(dat$log_mindist) #check its numeric
+class(dat$flow) #check its a factor
+#its not, so we need to convert it to a factor
+dat$flow <- as.factor(dat$flow)
+```
+
+Initial model 
+```{r}
+mod1 <- gam(pres.topa ~ s(log_mindist, by = flow)  + flow, 
+            data = dat)
+```
+
+Check GAM residuals
+(another package to checkout here is 'gratia')
+
+```{r}
+gam.check(mod1)
+```
+
+Model doens't fit that well, residuals are showing increasing dispersion (variance) with the mean. 
+
+As its count data we can try a poisson first
+
+```{r}
+mod2 <- gam(pres.topa ~ s(log_mindist, by = flow)  + flow, 
+            data = dat, family = poisson)
+gam.check(mod2)
+```
+
+A good way to check how well your count model fits is with a rootogram. 
+
+Another option would be to try the negative binomial and compare that to the poisson model
+
+```{r}
+mod3 <- gam(pres.topa ~ s(log_mindist, by = flow)  + flow, 
+            data = dat, family = nb)
+```
+
+```{r}
+gam.check(mod3)
+```
+
+Explore our neg binom model
+
+```{r}
+summary(mod3)
+```
+
+Quick plot to see how it looks
+```{r}
+library(visreg)
+visreg(mod3, "log_mindist", by = "flow")
+visreg(mod3, "log_mindist", by = "flow", scale = "response")
+```
+
+
+Model comparison 
+
+```{r}
+AIC(mod2, mod3)
+```
+
+Let's compare deviance explained
+```{r}
+summary(mod2)
+```
+
+
+Use model selection to look at the fixed effects
+
+```{r}
+mod4 <- gam(pres.topa ~ s(log_mindist)  + flow, 
+            data = dat, family = nb)
+AIC(mod2, mod3, mod4)
+```
+```{r}
+summary(mod4)
+```
+```{r}
+visreg(mod4, "log_mindist", by = "flow")
+```
+Let's drop flow to see if that matters
+
+```{r}
+mod5 <- gam(pres.topa ~ s(log_mindist), 
+            data = dat, family = nb)
+AIC(mod2, mod3, mod4, mod5)
+```
+
+
+Alternate philosophy for model selection. Model selection with anova for gam. Suggest reading `?anova.gam` as there are lots of caveats when using this approach with GAMs. It is a much more common (and well studied, therefore reliable) approach for GLMs. 
+
+```{r}
+anova(mod3,mod4, test = "Chisq")
+mod3$formula
+mod4$formula
+
+anova(mod4, mod5,test = "Chisq")
+```
+
+You can also get p-values for a single model, similar to using `drop1` to drop terms:
+
+```{r}
+anova(mod3)
+```
+
+
+
+
+
+
