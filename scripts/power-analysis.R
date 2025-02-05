@@ -1,5 +1,14 @@
 # Set seed for reproducibility
 set.seed(123)
+n <- 20
+x <- rnorm(n)
+# Simulate y as a function of x with some noise
+y <- 0 * x + rnorm(n)
+plot(x,y)  
+  # Fit model and extract p-value for x coefficient
+model <- lm(y ~ x)
+summary(model)
+
 
 # Function to simulate one dataset and return p-value
 simulate_regression <- function(n = 20, b = 0) {
@@ -31,7 +40,7 @@ abline(v = 0.05, col = "red", lwd = 2)
 #
 # Function to simulate student t data and return p-value
 #
-simulate_t <- function(n = 20, df = 2) {
+simulate_t <- function(n = 200, df = 2) {
     x <- rnorm(n)
     # Generate t-distributed residuals with low degrees of freedom
     y <- rt(n, df = df) + rnorm(n)
@@ -53,6 +62,15 @@ type_I_error_rate_simulate_t <- mean(p_values_t < 0.05)
 cat("\nNormal residuals Type I error rate:", round(type_I_error_rate, 3), "\n")
 cat("student t data Type I error rate:", round(type_I_error_rate_simulate_t, 3), "\n")
 cat("Expected rate: 0.05\n")
+n = 200
+ x <- rnorm(n)
+# Generate t-distributed residuals with low degrees of freedom
+y <- rt(n, df = 2) + rnorm(n)
+    
+    # Fit linear model (incorrectly assuming normality)
+     model <- lm(y ~ x)
+hist(resid(model))
+plot(model, 2)
 
 # Plot histograms side by side
 par(mfrow = c(1, 2))
@@ -107,7 +125,7 @@ abline(v = 0.05, col = "red", lwd = 2)
 n <- 20
 x <- rnorm(n)
 # True Poisson regression: log(lambda) = beta0 + beta*x
-lambda <- exp(0.5 + 0.5 * x)
+lambda <- exp(0.5 + 0.2 * x)
 y <- rpois(n, lambda)
 plot(x, y)
 
@@ -132,7 +150,7 @@ simulate_with_effect <- function(n = 20, beta = 0.5) {
 
 # Run simulations
 n_sims <- 5000
-results <- replicate(n_sims, simulate_with_effect(n = 30, beta = 0.3))
+results <- replicate(n_sims, simulate_with_effect(n = 20, beta = 1))
 
 # Calculate power for both methods
 power_lm <- mean(results["lm",] < 0.05)
